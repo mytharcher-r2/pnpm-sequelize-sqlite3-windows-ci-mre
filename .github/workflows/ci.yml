@@ -1,0 +1,40 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Debug env
+        run: |
+          node -p "process.version"
+          node -p "process.platform + ' ' + process.arch"
+          pnpm -v
+
+      - name: Install base deps (no sqlite3)
+        run: pnpm install
+
+      - name: Install sqlite3 only for CI (no-save)
+        run: pnpm add --no-save sqlite3
+
+      - name: Verify sqlite3 can be required
+        run: node -e "require('sqlite3'); console.log('sqlite3 loaded')"
+
+      - name: Smoke test (sequelize + sqlite)
+        run: pnpm test
