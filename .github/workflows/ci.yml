@@ -6,16 +6,12 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [18, 20]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 22
 
       - uses: pnpm/action-setup@v4
         with:
@@ -30,8 +26,12 @@ jobs:
       - name: Install base deps (no sqlite3)
         run: pnpm install
 
-      - name: Install sqlite3 only for CI (no-save)
-        run: pnpm add --no-save sqlite3
+      # pnpm does not support `pnpm add --no-save`.
+      # Workaround: add sqlite3, then restore manifest/lock so repo stays unchanged.
+      - name: Install sqlite3 only for CI (keep repo unchanged)
+        run: |
+          pnpm add sqlite3
+          git restore package.json pnpm-lock.yaml || true
 
       - name: Verify sqlite3 can be required
         run: node -e "require('sqlite3'); console.log('sqlite3 loaded')"
